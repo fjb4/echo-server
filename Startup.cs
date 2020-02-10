@@ -45,7 +45,8 @@ namespace EchoServer
                 echoText = defaultText;
             }
 
-            return echoText.Replace("{{now}}", DateTime.UtcNow.ToString(CultureInfo.InvariantCulture));
+            var nowStr = DateTime.UtcNow.ToString(CultureInfo.InvariantCulture);
+            return echoText.Replace("{{now}}", nowStr, StringComparison.InvariantCultureIgnoreCase);
         }
     }
 }
