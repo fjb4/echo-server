@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -30,13 +31,29 @@ namespace EchoServer
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGet("/", async context =>
-                    await context.Response.WriteAsync(BuildEchoText(configuration)));
+                {
+                    var text = BuildEchoText(configuration) + Environment.NewLine;
+
+                    if (configuration["timestamp"] != null)
+                    {
+                        text += DateTime.UtcNow.ToString(CultureInfo.InvariantCulture) + Environment.NewLine;
+                    }
+
+                    if (configuration["headers"] != null)
+                    {
+                        text += GetHeaderText(context.Request.Headers) + Environment.NewLine;
+                    }
+
+                    await context.Response.WriteAsync(text);
+                });
             });
         }
 
         private static string BuildEchoText(IConfiguration configuration)
         {
-            const string defaultText = "Hello World at {{now}}!";
+            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
+
+            const string defaultText = "Hello World!";
 
             var echoText = configuration.GetValue<string>("text");
 
@@ -45,8 +62,21 @@ namespace EchoServer
                 echoText = defaultText;
             }
 
-            var nowStr = DateTime.UtcNow.ToString(CultureInfo.InvariantCulture);
-            return echoText.Replace("{{now}}", nowStr, StringComparison.InvariantCultureIgnoreCase);
+            return echoText;
+        }
+
+        private static string GetHeaderText(IHeaderDictionary headers)
+        {
+            if (headers == null) throw new ArgumentNullException(nameof(headers));
+
+            var headerText = string.Empty;
+
+            foreach (var (key, value) in headers.OrderBy(h => h.Key))
+            {
+                headerText += $"{key} = {value}" + Environment.NewLine;
+            }
+
+            return headerText;
         }
     }
 }
